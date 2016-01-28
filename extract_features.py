@@ -3,7 +3,14 @@ from collections import defaultdict
 
 """ Read in twitter data and extract features for each word. 
 Data files have one word per line.
+
+Usage:
+    python extract_features.py <path/to/corpus> <path/to/output>
 """
+
+STANFORD_CLASS_PATH = "stanford-postagger."
+JAVA_PATH = 'java'
+
 
 class FeatureExtractor(object):
     """Extracts features for each word in corpus.
