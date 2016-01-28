@@ -8,10 +8,6 @@ Usage:
     python extract_features.py <path/to/corpus> <path/to/output>
 """
 
-STANFORD_CLASS_PATH = "stanford-postagger."
-JAVA_PATH = 'java'
-
-
 class FeatureExtractor(object):
     """Extracts features for each word in corpus.
 
