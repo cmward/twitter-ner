@@ -26,25 +26,16 @@ class FeatureExtractor(object):
 
     def __init__(self, corpus):
         self.corpus = corpus # path to corpus
-        self.worddict = self.get_word_counts()
-        self.most_common_words = sorted(self.worddict,
-                key=self.worddict.get, reverse=True)[:100]
         self.clusterdict = {}
         with open('clusters.txt') as clusters:
             for line in clusters:
                 self.clusterdict[line.split()[1]] = line.split()[0]
-        self.prevdict, self.nextdict = self.get_most_common_prev_next()
-    
-    def get_word_counts(self):
-        worddict = defaultdict(int)
-        with open(self.corpus) as corpus:
-            for line in corpus:
-                if line.strip() is not '':
-                    word = line.split()[0]
-                    worddict[word] += 1
-        return worddict
+        self.worddict, self.prevdict, self.nextdict = self.get_dicts()
+        self.most_common_words = sorted(self.worddict,
+                key=self.worddict.get, reverse=True)[:100]
 
-    def get_most_common_prev_next(self):
+    def get_dicts(self):
+        worddict = defaultdict(int)
         prevdict = defaultdict(lambda : defaultdict(int))
         nextdict = defaultdict(lambda : defaultdict(int))
         with open(self.corpus) as corpus:
@@ -53,13 +44,14 @@ class FeatureExtractor(object):
                 try:
                     if line.strip() and lines[i-1].strip() and lines[i+1].strip():
                         word = line.split()[0]
+                        worddict[word] += 1
                         prev = lines[i-1].split()[0]
                         prevdict[word][prev] += 1
                         next = lines[i+1].split()[0]
                         nextdict[word][next] += 1
                 except IndexError:
                     continue
-        return prevdict, nextdict
+        return worddict, prevdict, nextdict
 
     def format_for_pos_tagging(self, out_file):
         """Format the data as one tweet per line"""
@@ -83,7 +75,7 @@ class FeatureExtractor(object):
                             gold_line.split()[1]))
                     else:
                         out.write('\n')
-                
+
     ### Feature Functions ###
     # All features functions have to take word, prev, and next
     # as parameters to comply with the features method
@@ -147,7 +139,7 @@ class FeatureExtractor(object):
 
     def suffix(self, word, prev=None, next=None,
             prevpos=None, nextpos=None):
-        return "SUFFIX={}".format(word[:-3])
+        return "SUFFIX={}".format(word[-3:])
 
     def cluster(self, word, prev=None, next=None,
             prevpos=None, nextpos=None):
