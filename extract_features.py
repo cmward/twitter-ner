@@ -6,7 +6,10 @@ Data files have one word per line.
 
 Usage:
     python extract_features.py <path/to/corpus> <path/to/output>
+
 """
+
+        
 
 class FeatureExtractor(object):
     """Extracts features for each word in corpus.
@@ -28,8 +31,33 @@ class FeatureExtractor(object):
     def get_word_counts(self):
         with open(self.corpus) as corpus:
             for line in corpus:
-                word = line.split()[0]
-                self.worddict[word] += 1
+                if line.strip() is not '':
+                    word = line.split()[0]
+                    self.worddict[word] += 1
+
+    def format_for_pos_tagging(self, out_file):
+        """Format the data as one tweet per line"""
+        with open(self.corpus) as corpus, open(out_file, 'w+') as pos:
+            for line in corpus:
+                if line.strip() is not '':
+                    word, label = line.split()
+                    pos.write(word + ' ')
+                else:
+                    pos.write('\n')
+
+    def reformat_for_ner(self, pos_file, out_file):
+        """Put the data back into original format + POS tag feature"""
+        # need to open train.gold to reinsert BIO 
+        with open(pos_file) as pos, open(self.corpus) as corpus:
+            with open(out_file, 'w+') as out:
+                for gold_line, tagged_word in zip(corpus, pos):
+                    if gold_line.strip() is not '':
+                        out.write('{} {} {}\n'.format(gold_line.split()[0],
+                            tagged_word.split()[1].strip(), 
+                            gold_line.split()[1]))
+                    else:
+                        out.write('\n')
+                
 
     ### Feature Functions ###
     # All features functions have to take word, prev, and next
@@ -69,7 +97,6 @@ class FeatureExtractor(object):
             # reads the whole corpus into memory unfortunately
             lines = [line.strip() for line in corpus.readlines()
                      if line.strip() is not '']
-            print lines
             for i, line in enumerate(lines):
                 word, label = line.split()
                 if i-1 >= 0:
