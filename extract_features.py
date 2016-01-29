@@ -151,14 +151,17 @@ class FeatureExtractor(object):
 
     def cluster(self, word, prev=None, next=None,
             prevpos=None, nextpos=None):
-        return "CLUSTER={}".format(self.clusterdict[word])
+        try:
+            return "CLUSTER={}".format(self.clusterdict[word])
+        except KeyError:
+            return None
 
     def most_common_prev(self, word, prev=None, next=None,
             prevpos=None, nextpos=None):
         try:
             return "MCPREV={}".format(sorted(self.prevdict[word].items(),
                 key=lambda x: x[1], reverse=True)[0][0])
-        except IndexError:
+        except IndexError, KeyError:
             return None
 
     def most_common_next(self, word, prev=None, next=None, 
@@ -166,7 +169,7 @@ class FeatureExtractor(object):
         try:
             return "MCNEXT={}".format(sorted(self.nextdict[word].items(),
                 key=lambda x: x[1], reverse=True)[0][0])
-        except IndexError:
+        except IndexError, KeyError:
             return None
 
     def starts_sent(self, word, prev=None, next=None,
@@ -196,7 +199,10 @@ class FeatureExtractor(object):
                     self.cluster,
                     self.most_common_prev,
                     self.most_common_next,
-                    self.starts_sent]
+                    self.starts_sent,
+                    self.prev_pos,
+                    self.next_pos,
+                    self.suffix]
         feat_strings = [feat_fn(word, prev, next, prevpos, nextpos)
                         for feat_fn in feat_fns]
         return [feat for feat in feat_strings if feat is not None]
