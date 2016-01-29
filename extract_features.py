@@ -1,5 +1,6 @@
 import sys
 import subprocess
+import string
 from collections import defaultdict
 
 """ Read in twitter data and extract features for each word. 
@@ -28,11 +29,11 @@ class FeatureExtractor(object):
         self.worddict = self.get_word_counts()
         self.most_common_words = sorted(self.worddict,
                 key=self.worddict.get, reverse=True)[:100]
-        with open('clusters.txt') as clusters:
-            self.clusters = clusters.readlines()
         self.clusterdict = {}
-        for c in self.clusters:
-            self.clusterdict[c.split()[1]] = c.split()[0]
+        with open('clusters.txt') as clusters:
+            for line in clusters:
+                self.clusterdict[line.split()[1]] = line.split()[0]
+        self.prevdict, self.nextdict = self.get_most_common_prev_next()
     
     def get_word_counts(self):
         worddict = defaultdict(int)
@@ -42,6 +43,23 @@ class FeatureExtractor(object):
                     word = line.split()[0]
                     worddict[word] += 1
         return worddict
+
+    def get_most_common_prev_next(self):
+        prevdict = defaultdict(lambda : defaultdict(int))
+        nextdict = defaultdict(lambda : defaultdict(int))
+        with open(self.corpus) as corpus:
+            lines = corpus.readlines()
+            for i, line in enumerate(lines):
+                try:
+                    if line.strip() and lines[i-1].strip() and lines[i+1].strip():
+                        word = line.split()[0]
+                        prev = lines[i-1].split()[0]
+                        prevdict[word][prev] += 1
+                        next = lines[i+1].split()[0]
+                        nextdict[word][next] += 1
+                except IndexError:
+                    continue
+        return prevdict, nextdict
 
     def format_for_pos_tagging(self, out_file):
         """Format the data as one tweet per line"""
@@ -72,7 +90,7 @@ class FeatureExtractor(object):
 
     def init_caps(self, word, prev=None, next=None,
             prevpos=None, nextpos=None):
-        return ("INITCAPS" if word[0].isupper() and not word.isupper()
+        return ("INITCAPS" if word[0].isupper() and word[1:].islower()
                 else None)
 
     def all_caps(self, word, prev=None, next=None,
@@ -90,7 +108,7 @@ class FeatureExtractor(object):
             prevpos=None, nextpos=None):
         if next is not None:
             return ("NEXTINITCAPS" if next[0].isupper()
-                    and not next.isupper() else None)
+                    and next[1:].islower() else None)
         else:
             return None
 
@@ -105,7 +123,7 @@ class FeatureExtractor(object):
             prevpos=None, nextpos=None):
         if prev is not None:
             return ("PREVINITCAPS" if prev[0].isupper()
-                    and not prev.isupper() else None)
+                    and prev[1:].islower() else None)
         else:
             return None
 
@@ -135,6 +153,35 @@ class FeatureExtractor(object):
             prevpos=None, nextpos=None):
         return "CLUSTER={}".format(self.clusterdict[word])
 
+    def most_common_prev(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        try:
+            return "MCPREV={}".format(sorted(self.prevdict[word].items(),
+                key=lambda x: x[1], reverse=True)[0][0])
+        except IndexError:
+            return None
+
+    def most_common_next(self, word, prev=None, next=None, 
+            prevpos=None, nextpos=None):
+        try:
+            return "MCNEXT={}".format(sorted(self.nextdict[word].items(),
+                key=lambda x: x[1], reverse=True)[0][0])
+        except IndexError:
+            return None
+
+    def starts_sent(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        return ("STARTSSENT" if not prev or prev in '?!.' or not prev.strip() 
+                else None)
+
+    def prev_pos(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        return "PREVPOS={}".format(prevpos) if prevpos is not None else None
+
+    def next_pos(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        return "NEXTPOS={}".format(nextpos) if nextpos is not None else None
+
     def features(self, word, prev, next, prevpos, nextpos):
         """Get the list of feature strings for `word`"""
         feat_fns = [self.init_caps,
@@ -146,7 +193,10 @@ class FeatureExtractor(object):
                     self.prev_word,
                     self.next_word,
                     self.most_common,
-                    self.cluster]
+                    self.cluster,
+                    self.most_common_prev,
+                    self.most_common_next,
+                    self.starts_sent]
         feat_strings = [feat_fn(word, prev, next, prevpos, nextpos)
                         for feat_fn in feat_fns]
         return [feat for feat in feat_strings if feat is not None]
