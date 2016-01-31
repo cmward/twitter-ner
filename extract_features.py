@@ -2,6 +2,7 @@ import sys
 import subprocess
 import string
 from collections import defaultdict
+from nltk.corpus import names, gazetteers
 
 """ Read in twitter data and extract features for each word. 
 Data files have one word per line.
@@ -33,6 +34,16 @@ class FeatureExtractor(object):
         self.worddict, self.prevdict, self.nextdict = self.get_dicts()
         self.most_common_words = sorted(self.worddict,
                 key=self.worddict.get, reverse=True)[:100]
+
+        self.names_set = set([name.lower() for name in names.words('male.txt')] +
+                         [name.lower() for name in names.words('female.txt')])
+
+        self.places_set = set([ca_prov.lower() for ca_prov in gazetteers.words('caprovinces.txt')] +
+                          [country.lower() for country in gazetteers.words('countries.txt')] + 
+                          [country.lower() for country in gazetteers.words('isocountries.txt')] + 
+                          [city.lower() for city in gazetteers.words('uscities.txt')] + 
+                          [abbrev.lower() for abbrev in gazetteers.words('usstateabbrev.txt')] + 
+                          [state.lower() for state in gazetteers.words('usstates.txt')])
 
     def get_dicts(self):
         worddict = defaultdict(int)
@@ -169,6 +180,14 @@ class FeatureExtractor(object):
         return ("STARTSSENT" if not prev or prev in '?!.' or not prev.strip() 
                 else None)
 
+    def name(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        return "NAME" if word.lower() in self.names_set else None
+
+    def place(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        return "PLACE" if word.lower() in self.places_set else None
+
     def prev_pos(self, word, prev=None, next=None,
             prevpos=None, nextpos=None):
         return "PREVPOS={}".format(prevpos) if prevpos is not None else None
@@ -189,12 +208,15 @@ class FeatureExtractor(object):
                     self.next_word,
                     self.most_common,
                     self.cluster,
-                    self.most_common_prev,
-                    self.most_common_next,
+                    #self.most_common_prev,
+                    #self.most_common_next,
                     self.starts_sent,
                     self.prev_pos,
                     self.next_pos,
-                    self.suffix]
+                    self.suffix,
+                    #self.name,
+                    #self.place
+                    ]
         feat_strings = [feat_fn(word, prev, next, prevpos, nextpos)
                         for feat_fn in feat_fns]
         return [feat for feat in feat_strings if feat is not None]
