@@ -208,14 +208,14 @@ class FeatureExtractor(object):
                     self.next_word,
                     self.most_common,
                     self.cluster,
-                    #self.most_common_prev,
-                    #self.most_common_next,
+                    self.most_common_prev,
+                    self.most_common_next,
                     self.starts_sent,
                     self.prev_pos,
                     self.next_pos,
                     self.suffix,
-                    #self.name,
-                    #self.place
+                    self.name,
+                    self.place
                     ]
         feat_strings = [feat_fn(word, prev, next, prevpos, nextpos)
                         for feat_fn in feat_fns]
