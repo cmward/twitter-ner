@@ -247,7 +247,7 @@ class FeatureExtractor(object):
 
 def main(corpus_file, output_file):
     fe = FeatureExtractor(corpus_file)
-    #fe.format_for_pos_tagging(fe.corpus, 'train.formatted')
+    #fe.format_for_pos_tagging('train.formatted')
     #subprocess.call('./pos-tag.sh train.formatted', shell=True)
     #fe.reformat_for_ner('train.pos', 'train.pos.gold')
     fe.write_mallet_input(output_file)
