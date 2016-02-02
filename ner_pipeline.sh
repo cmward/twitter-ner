@@ -5,8 +5,8 @@
 mkdir -p "$1"
 
 echo "Running extract_features"
-python extract_features.py train.gold.pos train.gold.feats 
-python extract_features.py dev.gold.pos dev.gold.feats 
+python extract_features.py train.gold.tpos train.gold.feats 
+python extract_features.py dev.gold.tpos dev.gold.feats 
 
 ./mallet-tag.sh --train true --model-file train.model train.gold.feats 
 
@@ -14,7 +14,7 @@ python extract_features.py dev.gold.pos dev.gold.feats
 
 #echo "$2" > README.md
 
-python evaluate.py ../dev.gold output.txt 2> README.md 
+python evaluate.py dev.gold.tpos output.txt > README.md 
 
 echo "$2" >> README.md
 
