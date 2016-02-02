@@ -2,7 +2,7 @@ import sys
 
 def evaluate(gold, output):
     with open(gold) as g, open(output) as o:
-        gold_labels = [line.split()[1].strip() for line in g.readlines()
+        gold_labels = [line.split()[2].strip() for line in g.readlines()
                        if line.strip()]
         output = [line.strip() for line in o.readlines() if line.strip()]
     total = 0.
@@ -21,7 +21,7 @@ def evaluate(gold, output):
 
 def precision(gold, output, label='B'):
     with open(gold) as g, open(output) as o:
-        gold_labels = [line.split()[1].strip() for line in g.readlines()
+        gold_labels = [line.split()[2].strip() for line in g.readlines()
                        if line.strip()]
         output = [line.strip() for line in o.readlines() if line.strip()]
         tp = 0.
@@ -36,7 +36,7 @@ def precision(gold, output, label='B'):
 
 def recall(gold, output, label='B'):
     with open(gold) as g, open(output) as o:
-        gold_labels = [line.split()[1].strip() for line in g.readlines()
+        gold_labels = [line.split()[2].strip() for line in g.readlines()
                        if line.strip()]
         output = [line.strip() for line in o.readlines() if line.strip()]
         tp = 0.
