@@ -224,26 +224,28 @@ class FeatureExtractor(object):
     def write_mallet_input(self, output_file):
         with open(self.corpus) as corpus, open(output_file, 'w+') as out:
             # reads the whole corpus into memory unfortunately
-            lines = [line.strip() for line in corpus.readlines()
-                     if line.strip() is not '']
+            lines = corpus.readlines()
             for i, line in enumerate(lines):
-                word, pos, label = line.split()
-                if i-1 >= 0:
-                    prev = lines[i-1].split()[0]
-                    prevpos = lines[i-1].split()[1]
-                else: 
-                    prev = None
-                    prevpos = None
-                if i+1 < len(lines):
-                    next = lines[i+1].split()[0]
-                    nextpos = lines[i+1].split()[1]
+                if line.strip():
+                    word, pos, label = line.split()
+                    try:
+                        prev = lines[i-1].split()[0]
+                        prevpos = lines[i-1].split()[1]
+                    except IndexError:
+                        prev = None
+                        prevpos = None
+                    try:
+                        next = lines[i+1].split()[0]
+                        nextpos = lines[i+1].split()[1]
+                    except IndexError:
+                        next = None
+                        nextpos = None
+                    out.write('{} {} {} {}\n'.format(
+                        word, pos,
+                        ' '.join(self.features(word, prev, next, prevpos, nextpos)),
+                        label))
                 else:
-                    next = None
-                    nextpos = None
-                out.write('{} {} {} {}\n'.format(
-                    word, pos,
-                    ' '.join(self.features(word, prev, next, prevpos, nextpos)),
-                    label))
+                    out.write('\n')
 
 def main(corpus_file, output_file):
     fe = FeatureExtractor(corpus_file)

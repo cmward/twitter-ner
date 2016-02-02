@@ -14,8 +14,9 @@ python extract_features.py dev.gold.tpos dev.gold.feats
 
 #echo "$2" > README.md
 
-python evaluate.py dev.gold.tpos output.txt > README.md 
+python evaluate-ner.py dev.gold.tpos output.txt > "$1"/README.md
+python evaluate.py dev.gold.tpos output.txt >> "$1"/README.md 
 
-echo "$2" >> README.md
+echo "\n$2" >> "$1"/README.md
 
-mv train.gold.feats dev.gold.feats train.model output.txt README.md ./"$1"
+mv train.gold.feats dev.gold.feats train.model output.txt ./"$1"
