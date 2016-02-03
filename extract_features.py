@@ -42,7 +42,7 @@ class FeatureExtractor(object):
                           [country.lower() for country in gazetteers.words('countries.txt')] + 
                           [country.lower() for country in gazetteers.words('isocountries.txt')] + 
                           [city.lower() for city in gazetteers.words('uscities.txt')] + 
-                          [abbrev.lower() for abbrev in gazetteers.words('usstateabbrev.txt')] + 
+                          #[abbrev.lower() for abbrev in gazetteers.words('usstateabbrev.txt')] + 
                           [state.lower() for state in gazetteers.words('usstates.txt')])
 
     def get_dicts(self):
