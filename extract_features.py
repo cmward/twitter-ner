@@ -196,6 +196,13 @@ class FeatureExtractor(object):
             prevpos=None, nextpos=None):
         return "NEXTPOS={}".format(nextpos) if nextpos is not None else None
 
+    def char_ngrams(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        ngrams = [['char-'+str(n)+'-gram='+word[i:i+n]
+                  for i in range(len(word)-n+1)] for n in range(1,7)]
+        ngrams_flat = [ng for sublist in ngrams for ng in sublist]
+        return ' '.join(ngrams_flat)
+
     def features(self, word, prev, next, prevpos, nextpos):
         """Get the list of feature strings for `word`"""
         feat_fns = [self.init_caps,
@@ -213,9 +220,10 @@ class FeatureExtractor(object):
                     self.starts_sent,
                     self.prev_pos,
                     self.next_pos,
-                    self.suffix,
+                    #self.suffix,
                     self.name,
-                    self.place
+                    self.place,
+                    self.char_ngrams
                     ]
         feat_strings = [feat_fn(word, prev, next, prevpos, nextpos)
                         for feat_fn in feat_fns]
