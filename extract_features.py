@@ -1,6 +1,7 @@
 import sys
 import subprocess
 import string
+import zipfile
 from collections import defaultdict
 from nltk.corpus import names, gazetteers
 
@@ -25,25 +26,57 @@ class FeatureExtractor(object):
 
     """
 
-    def __init__(self, corpus):
+    def __init__(self, corpus=None):
         self.corpus = corpus # path to corpus
-        self.clusterdict = {}
-        with open('clusters.txt') as clusters:
-            for line in clusters:
-                self.clusterdict[line.split()[1]] = line.split()[0]
-        self.worddict, self.prevdict, self.nextdict = self.get_dicts()
-        self.most_common_words = sorted(self.worddict,
-                key=self.worddict.get, reverse=True)[:100]
+        if self.corpus:
+            self.clusterdict = {}
+            with open('clusters.txt') as clusters:
+                for line in clusters:
+                    self.clusterdict[line.split()[1]] = line.split()[0]
+            self.worddict, self.prevdict, self.nextdict = self.get_dicts()
+            self.most_common_words = sorted(self.worddict,
+                    key=self.worddict.get, reverse=True)[:100]
 
-        self.names_set = set([name.lower() for name in names.words('male.txt')] +
-                         [name.lower() for name in names.words('female.txt')])
+        self.names_set = set(
+                [name.lower() for name in names.words('male.txt')] +
+                [name.lower() for name in names.words('female.txt')])
+        self.places_set = set(
+                #[ca_prov.lower() for ca_prov in gazetteers.words('caprovinces.txt')] +
+                [country.lower() for country in gazetteers.words('countries.txt')] + 
+                #[country.lower() for country in gazetteers.words('isocountries.txt')] + 
+                [city.lower() for city in gazetteers.words('uscities.txt')] + 
+                #[abbrev.lower() for abbrev in gazetteers.words('usstateabbrev.txt')] + 
+                [state.lower() for state in gazetteers.words('usstates.txt')])
 
-        self.places_set = set([ca_prov.lower() for ca_prov in gazetteers.words('caprovinces.txt')] +
-                          [country.lower() for country in gazetteers.words('countries.txt')] + 
-                          [country.lower() for country in gazetteers.words('isocountries.txt')] + 
-                          [city.lower() for city in gazetteers.words('uscities.txt')] + 
-                          #[abbrev.lower() for abbrev in gazetteers.words('usstateabbrev.txt')] + 
-                          [state.lower() for state in gazetteers.words('usstates.txt')])
+        self.feat_fns = [self.init_caps,
+                         self.all_caps,
+                         self.next_init_caps,
+                         self.next_all_caps,
+                         self.prev_init_caps,
+                         self.prev_all_caps,
+                         self.prev_word,
+                         self.next_word,
+                         self.most_common,
+                         self.cluster,
+                         self.most_common_prev,
+                         self.most_common_next,
+                         self.starts_sent,
+                         self.prev_pos,
+                         self.next_pos,
+                         self.name,
+                         self.place,
+                         self.char_ngrams]
+
+    def print_feat_fns(self):
+        print '\n'.join([f.__name__ for f in self.feat_fns])
+
+    def make_geo_cities_list(self):
+        geo_cities = []
+        with zipfile.ZipFile('cities15000.zip') as cities:
+            c = cities.open('cities15000.txt')
+            for line in c:
+                geo_cities.append(line.split('\t')[1].lower())
+        return geo_cities
 
     def get_dicts(self):
         worddict = defaultdict(int)
@@ -88,8 +121,8 @@ class FeatureExtractor(object):
                         out.write('\n')
 
     ### Feature Functions ###
-    # All features functions have to take word, prev, and next
-    # as parameters to comply with the features method
+    # All features functions have to take word, prev, next, prevpos, 
+    # and nextpos as parameters to comply with the features method
 
     def init_caps(self, word, prev=None, next=None,
             prevpos=None, nextpos=None):
@@ -203,30 +236,26 @@ class FeatureExtractor(object):
         ngrams_flat = [ng for sublist in ngrams for ng in sublist]
         return ' '.join(ngrams_flat)
 
+    def bigram(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        if prev:
+            return "BIGRAM={}".format(' '.join([prev, word]))
+        else:
+            return None
+
+    def geo_city(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        if word.lower() in self.geo_cities:
+            return "GEOCITY"
+        if next:
+            bigram = ' '.join([word.lower(), next.lower()])
+            if bigram in self.geo_cities:
+                return "GEOCITY"
+
     def features(self, word, prev, next, prevpos, nextpos):
         """Get the list of feature strings for `word`"""
-        feat_fns = [self.init_caps,
-                    self.all_caps,
-                    self.next_init_caps,
-                    self.next_all_caps,
-                    self.prev_init_caps,
-                    self.prev_all_caps,
-                    self.prev_word,
-                    self.next_word,
-                    self.most_common,
-                    self.cluster,
-                    self.most_common_prev,
-                    self.most_common_next,
-                    self.starts_sent,
-                    self.prev_pos,
-                    self.next_pos,
-                    #self.suffix,
-                    self.name,
-                    self.place,
-                    self.char_ngrams
-                    ]
         feat_strings = [feat_fn(word, prev, next, prevpos, nextpos)
-                        for feat_fn in feat_fns]
+                        for feat_fn in self.feat_fns]
         return [feat for feat in feat_strings if feat is not None]
 
     def write_mallet_input(self, output_file):
@@ -263,4 +292,8 @@ def main(corpus_file, output_file):
     fe.write_mallet_input(output_file)
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    if sys.argv[1] == "print_features":
+        fe = FeatureExtractor()
+        fe.print_feat_fns()
+    else:
+        main(sys.argv[1], sys.argv[2])
