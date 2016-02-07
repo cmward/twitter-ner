@@ -1,2 +1,0 @@
-Accuracy: 0.591362126246
-Used NLTK names and place gazetteers as features
