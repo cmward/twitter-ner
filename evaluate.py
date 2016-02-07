@@ -7,7 +7,6 @@ def evaluate(gold, output):
         output = [line.strip() for line in o.readlines() if line.strip()]
     total = 0.
     correct = 0.
-    assert(len(gold_labels) == len(output))
     for gold, out in zip(gold_labels, output):
         if gold == 'O':
             continue

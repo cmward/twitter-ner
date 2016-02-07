@@ -2,8 +2,9 @@ import sys
 import subprocess
 import string
 import zipfile
+import csv
 from collections import defaultdict
-from nltk.corpus import names, gazetteers
+from nltk.corpus import names, gazetteers, wordnet as wn
 
 """ Read in twitter data and extract features for each word. 
 Data files have one word per line.
@@ -30,30 +31,32 @@ class FeatureExtractor(object):
         self.corpus = corpus # path to corpus
         if self.corpus:
             self.clusterdict = {}
-            with open('clusters.txt') as clusters:
+            with open('50mpaths2') as clusters:
                 for line in clusters:
                     self.clusterdict[line.split()[1]] = line.split()[0]
             self.worddict, self.prevdict, self.nextdict = self.get_dicts()
             self.most_common_words = sorted(self.worddict,
                     key=self.worddict.get, reverse=True)[:100]
 
-        self.names_set = set(
-                [name.lower() for name in names.words('male.txt')] +
-                [name.lower() for name in names.words('female.txt')])
-        self.places_set = set(
-                #[ca_prov.lower() for ca_prov in gazetteers.words('caprovinces.txt')] +
-                [country.lower() for country in gazetteers.words('countries.txt')] + 
-                #[country.lower() for country in gazetteers.words('isocountries.txt')] + 
-                [city.lower() for city in gazetteers.words('uscities.txt')] + 
-                #[abbrev.lower() for abbrev in gazetteers.words('usstateabbrev.txt')] + 
-                [state.lower() for state in gazetteers.words('usstates.txt')])
+        #self.names_set = set(
+        #        [name.lower() for name in names.words('male.txt')] +
+        #        [name.lower() for name in names.words('female.txt')])
+        #self.places_set = set(
+        #        #[ca_prov.lower() for ca_prov in gazetteers.words('caprovinces.txt')] +
+        #        [country.lower() for country in gazetteers.words('countries.txt')] + 
+        #        #[country.lower() for country in gazetteers.words('isocountries.txt')] + 
+        #        [city.lower() for city in gazetteers.words('uscities.txt')] + 
+        #        #[abbrev.lower() for abbrev in gazetteers.words('usstateabbrev.txt')] + 
+        #        [state.lower() for state in gazetteers.words('usstates.txt')])
+        self.census_names = self.make_census_list()
+        self.geo_cities = self.make_geo_cities_list()
 
         self.feat_fns = [self.init_caps,
                          self.all_caps,
-                         self.next_init_caps,
-                         self.next_all_caps,
-                         self.prev_init_caps,
-                         self.prev_all_caps,
+                         #self.next_init_caps,
+                         #self.next_all_caps,
+                         #self.prev_init_caps,
+                         #self.prev_all_caps,
                          self.prev_word,
                          self.next_word,
                          self.most_common,
@@ -63,9 +66,16 @@ class FeatureExtractor(object):
                          self.starts_sent,
                          self.prev_pos,
                          self.next_pos,
-                         self.name,
-                         self.place,
-                         self.char_ngrams]
+                         #self.name,
+                         #self.place,
+                         self.char_ngrams,
+                         self.census_name,
+                         #self.bigram,
+                         self.geo_city,
+                         self.alpha,
+                         self.has_digit, 
+                         #self.in_wn
+                         ]
 
     def print_feat_fns(self):
         print '\n'.join([f.__name__ for f in self.feat_fns])
@@ -77,6 +87,14 @@ class FeatureExtractor(object):
             for line in c:
                 geo_cities.append(line.split('\t')[1].lower())
         return geo_cities
+
+    def make_census_list(self):
+        c_names = []
+        with open('census_names/app_c.csv') as names:
+            reader = csv.reader(names)
+            for row in reader:
+                c_names.append(row[0].lower())
+        return c_names
 
     def get_dicts(self):
         worddict = defaultdict(int)
@@ -177,6 +195,15 @@ class FeatureExtractor(object):
         else:
             return None
 
+    def alpha(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        if word.isalpha():
+            return "ALPHA"
+
+    def has_digit(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        return "HASDIGIT" if any(char.isdigit() for char in word) else None
+
     def most_common(self, word, prev=None, next=None, 
             prevpos=None, nextpos=None):
         return "MOSTCOMMON" if word in self.most_common_words else None
@@ -251,6 +278,21 @@ class FeatureExtractor(object):
             bigram = ' '.join([word.lower(), next.lower()])
             if bigram in self.geo_cities:
                 return "GEOCITY"
+
+    def census_name(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        if word.lower() in self.census_names:
+            return "CENSUS"
+
+    def starts_with_symbol(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        if word.startswith(('#', '@')):
+            return "STARTSYMBOL"
+
+    def in_wn(self, word, prev=None, next=None,
+            prevpos=None, nextpos=None):
+        if wn.synsets(word):
+            return "INWN"
 
     def features(self, word, prev, next, prevpos, nextpos):
         """Get the list of feature strings for `word`"""
